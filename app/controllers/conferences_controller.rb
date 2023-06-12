@@ -2,6 +2,8 @@ require 'base64'
 require 'fileutils'
 
 class ConferencesController < ApplicationController
+    skip_before_action :authenticate
+
     def index
         render json: Conference.all
     end
@@ -38,8 +40,13 @@ class ConferencesController < ApplicationController
         render json: conference, status: :created
     end
 
+    def show
+      conference = Conference.find(params[:id])
+      render json: conference, status: :ok
+    end
+
     def save_image(path, base64_string)
-        
+
         # Decode the base64 string
         image_data = Base64.decode64(base64_string)
 
