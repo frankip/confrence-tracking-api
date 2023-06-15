@@ -2,7 +2,7 @@ require 'base64'
 require 'fileutils'
 
 class ConferencesController < ApplicationController
-    skip_before_action :authenticate
+    skip_before_action :authenticate, only: [:index, :show, :findByReferenceNumber]
 
     def index
         render json: Conference.all
