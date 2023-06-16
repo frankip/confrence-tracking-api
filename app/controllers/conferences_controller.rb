@@ -2,10 +2,18 @@ require 'base64'
 require 'fileutils'
 
 class ConferencesController < ApplicationController
-    skip_before_action :authenticate, only: [:index, :show, :findByReferenceNumber]
+    skip_before_action :authenticate, only: [:index, :show, :findByReferenceNumber, :monthly_tally]
 
     def index
         render json: Conference.all
+    end
+
+    def monthly_tally
+        month_tally = Conference.all.map { |c| [Date.parse(c.date.split(/\s+-\s+/)[0]).strftime('%B'), Date.parse(c.date.split(/\s+-\s+/)[0]).strftime('%B')] }.flatten.tally
+        months = Date::MONTHNAMES.compact.group_by { |month| month }.transform_values(&:count)
+        month_init = months.each_key { |k| months[k]=0 }
+        tally = month_init.merge(month_tally)
+        render json: tally
     end
 
     def findByReferenceNumber
