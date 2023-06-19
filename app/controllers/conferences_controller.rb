@@ -2,10 +2,88 @@ require 'base64'
 require 'fileutils'
 
 class ConferencesController < ApplicationController
-    skip_before_action :authenticate
+    skip_before_action :authenticate, only: [:index, :show, :findByReferenceNumber, :monthly_tally, :yearly_tally, :foreign_vs_kenyan, :yearly_foreign_vs_kenyan, :monthly_foreign_vs_kenyan]
 
     def index
         render json: Conference.all
+    end
+
+    def daily_participation
+        
+    end
+
+    def foreign
+        data = {}
+        Conference.all.map { |c| {"#{c.id}" => c.participants.map { |p| [p.id, p.nationality] } } }.map { |conf| ["#{conf.keys[0]}" => {"Foreigners" => conf.values[0].uniq.select{ |p| p[1] != "Kenyans" }.map{|pt| pt[0]}, "Kenyans" => conf.values[0].uniq.select{ |p| p[1] == "Kenyans" }.map{|pt| pt[0]} }] }.map { |conf| conf[0] }.each do |conf|
+            data["#{conf.keys[0]}"] = conf.values[0]
+        end
+        data
+    end
+
+    def foreign_monthly
+        data = {}
+        Conference.all.filter { |c| Date.parse(c.date.slice(0..9)) >  Date.today.prev_year(1)  }.map { |c| { "#{Date.parse(c.date.split(/\s+-\s+/)[0]).strftime('%B')}" => c.participants.map { |p| [p.id, p.nationality] } } }.map { |conf| {"#{conf.keys[0]}" => {"Foreigners" => conf.values[0].uniq.select{ |p| p[1] != "Kenyans" }.map{|pt| pt[0]}, "Kenyans" => conf.values[0].uniq.select{ |p| p[1] == "Kenyans" }.map{|pt| pt[0]} } } }.each do |conf|
+            month = "#{conf.keys[0]}"
+            if data[month]
+                data[month]["Foreigners"].concat(conf[month]["Foreigners"])
+                data[month]["Kenyans"].concat(conf[month]["Kenyans"])
+            else
+                data[month] = conf[month]
+            end
+        end
+
+        data
+    end
+        
+
+    def foreign_vs_kenyan
+        render json: foreign
+    end
+
+    def yearly_foreign_vs_kenyan
+        data = {}
+        foreign.each_pair do |key, value|
+            year = "#{Conference.find(key.to_i).date.split("-")[0]}"
+            if data[year]
+                data[year]["Foreigners"].concat(value["Foreigners"])
+                data[year]["Kenyans"].concat(value["Kenyans"])
+            else
+                data[year] = value
+            end
+        end
+
+        tallys = {}
+
+        data.each_pair do |key, value|
+            tallys[key] = {"Foreigners" => value["Foreigners"].size, "Kenyans" => value["Kenyans"].size}
+        end
+
+        render json: tallys
+    end
+
+    def monthly_foreign_vs_kenyan
+        tallys = {}
+
+        foreign_monthly.each_pair do |key, value|
+            tallys[key] = {"Foreigners" => value["Foreigners"].size, "Kenyans" => value["Kenyans"].size}
+        end
+
+        render json: tallys
+    end
+
+    def monthly_participation
+    end
+
+    def yearly_confs
+        render json: Conference.all.map { |c| Date.parse(c.date.split(/\s+-\s+/)[0]).strftime('%Y') }.tally
+    end
+
+    def monthly_confs
+        month_tally = Conference.all.map { |c| [Date.parse(c.date.split(/\s+-\s+/)[0]).strftime('%B'), Date.parse(c.date.split(/\s+-\s+/)[0]).strftime('%B')] }.flatten.tally
+        months = Date::MONTHNAMES.compact.group_by { |month| month }.transform_values(&:count)
+        month_init = months.each_key { |k| months[k]=0 }
+        tally = month_init.merge(month_tally)
+        render json: tally
     end
 
     def findByReferenceNumber
