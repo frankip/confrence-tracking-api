@@ -2,7 +2,7 @@ require 'base64'
 require 'fileutils'
 
 class ConferencesController < ApplicationController
-    skip_before_action :authenticate, only: [:index, :show, :findByReferenceNumber, :monthly_tally, :yearly_tally, :foreign_vs_kenyan, :yearly_foreign_vs_kenyan, :monthly_foreign_vs_kenyan]
+    skip_before_action :authenticate, only: [:index, :show, :findByReferenceNumber, :monthly_tally, :yearly_tally, :foreign_vs_kenyan, :yearly_foreign_vs_kenyan, :monthly_foreign_vs_kenyan, :delete_conference, :update_conference]
 
     def index
         render json: Conference.all
@@ -138,6 +138,26 @@ class ConferencesController < ApplicationController
         File.open(filepath, 'wb') do |f|
             f.write image_data
         end
+    end
+
+    def update_conference
+        conference = Conference.find_by(reference_number: params[:reference_number])
+        if conference
+          conference.update(conference_params)
+          render json: conference
+        else
+          render json: {error: 'Unable to update conference'}
+        end
+    end
+
+    def delete_conference
+            conference = Conference.find_by(reference_number: params[:reference_number])
+            if conference
+              conference.destroy
+              render json: { message: 'Record deleted successfully' }
+            else
+              render json: { error: 'Record not found' }, status: :not_found
+            end
     end
 
     private
