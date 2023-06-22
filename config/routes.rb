@@ -15,4 +15,7 @@ Rails.application.routes.draw do
   post "/login", to: "sessions#create"
   get "/me", to: "sessions#me"
   get "/logout", to: "sessions#logout"
+
+  delete "/conference/:reference_number", to: "conferences#delete_conference"
+  patch "/conference/:reference_number", to: "conferences#update_conference"
 end
