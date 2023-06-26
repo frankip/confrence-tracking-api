@@ -104,6 +104,7 @@ class ConferencesController < ApplicationController
             number: conference_params[:number],
             email: conference_params[:email],
             location: conference_params[:location],
+            city: conference_params[:city],
             time: conference_params[:time],
             date: conference_params[:date],
             image: File.join("/"+image.to_s, "poster."+content_type.split("/")[-1]),
@@ -163,6 +164,6 @@ class ConferencesController < ApplicationController
     private
 
     def conference_params
-        params.permit(:ministry_in_charge, :number, :email, :location, :time, :date, :image, :title, :description, :reference_number)
+        params.permit(:ministry_in_charge, :number, :email, :location, :city, :time, :date, :image, :title, :description, :reference_number)
     end
 end

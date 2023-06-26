@@ -17,6 +17,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_16_081602) do
     t.string "number"
     t.string "email"
     t.string "location"
+    t.string "city"
     t.string "time"
     t.string "date"
     t.string "image"

@@ -24,19 +24,25 @@ images = [
   "/conferences/CONF007/poster.webp"
 ]
 
+cities = ["Nairobi", "Mombasa", "Kisumu", "Nakuru", "Eldoret", "Naivasha"]
+
 puts "Seeding"
 
 start_date = Date.new(2019, 1, 1)
 end_date = Date.new(Date.today.year, 12, 31)
 
+
+
 97.times do
     start = (start_date..end_date).to_a.sample.strftime('%Y-%m-%d')
     last = (Date.parse(start) + rand(1..10)).strftime('%Y-%m-%d')
+    
     hash = {
       "reference_number": SecureRandom.alphanumeric(10).upcase,
       "ministry_in_charge": "Ministry of #{Faker::Company.name}",
       "number": Faker::PhoneNumber.phone_number_with_country_code,
       "email": Faker::Internet.email,
+      "city": cities.sample,
       "location": "#{Faker::Address.street_address}, #{Faker::Address.secondary_address}" ,
       "date": "#{start} - #{last}",
       "time": "09:30 - 16:30",
