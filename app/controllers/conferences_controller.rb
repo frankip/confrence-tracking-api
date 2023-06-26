@@ -163,6 +163,6 @@ class ConferencesController < ApplicationController
     private
 
     def conference_params
-        params.permit(:ministry_in_charge, :number, :email, :location, :time, :date, :image, :title, :description)
+        params.permit(:ministry_in_charge, :number, :email, :location, :time, :date, :image, :title, :description, :reference_number)
     end
 end
