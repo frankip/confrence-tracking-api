@@ -24,6 +24,8 @@ images = [
   "/conferences/CONF007/poster.webp"
 ]
 
+cities = ["Nairobi", "Mombasa", "Kisumu", "Nakuru", "Eldoret", "Naivasha"]
+
 puts "Seeding"
 
 start_date = Date.new(2019, 1, 1)
@@ -40,6 +42,7 @@ end_date = Date.new(Date.today.year, 12, 31)
       "location": "#{Faker::Address.street_address}, #{Faker::Address.secondary_address}" ,
       "date": "#{start} - #{last}",
       "time": "09:30 - 16:30",
+      "city": cities.sample,
       "image": images.sample,
       "title": Faker::Lorem.sentence.slice(0..-2),
       "description": Faker::Lorem.paragraph(sentence_count: 10)
