@@ -6,6 +6,7 @@ Rails.application.routes.draw do
   resources :conferences
 
   get "/statistics", to: "conferences#stats"
+  post "/new/admin", to: "users#new_admin"
 
   get "/monthly/tally", to: "conferences#monthly_confs"
   get "/yearly/tally", to: "conferences#yearly_confs"
