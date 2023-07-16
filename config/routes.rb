@@ -5,6 +5,8 @@ Rails.application.routes.draw do
   resources :users
   resources :conferences
 
+  get "/statistics", to: "conferences#stats"
+
   get "/monthly/tally", to: "conferences#monthly_confs"
   get "/yearly/tally", to: "conferences#yearly_confs"
   get "/foreign/vs/kenyan", to: "conferences#foreign_vs_kenyan"
@@ -18,4 +20,6 @@ Rails.application.routes.draw do
 
   delete "/conference/:reference_number", to: "conferences#delete_conference"
   patch "/conference/:reference_number", to: "conferences#update_conference"
+
+  post "/message", to: "conferences#receive_message"
 end

@@ -1,15 +1,55 @@
 require 'base64'
 require 'fileutils'
+require 'net/smtp'
 
 class ConferencesController < ApplicationController
-    skip_before_action :authenticate, only: [:index, :show, :findByReferenceNumber, :monthly_tally, :yearly_tally, :foreign_vs_kenyan, :yearly_foreign_vs_kenyan, :monthly_foreign_vs_kenyan, :delete_conference, :update_conference]
+    skip_before_action :authenticate, only: [:index, :show, :receive_message, :findByReferenceNumber, :monthly_tally, :yearly_tally, :foreign_vs_kenyan, :yearly_foreign_vs_kenyan, :monthly_foreign_vs_kenyan, :delete_conference, :update_conference]
 
+    def send_email(sender_email, sender_password, recipient_email, subject, body)
+        smtp_server = 'smtp.gmail.com'
+        smtp_port = 587
+        domain = 'gmail.com'
+        enable_ssl = true
+
+        message = <<~MESSAGE
+            From: #{sender_email}
+            To: #{recipient_email}
+            Subject: #{subject}
+
+            #{body}
+        MESSAGE
+
+        Net::SMTP.start(smtp_server, smtp_port, domain, sender_email, sender_password, :login) do |smtp|
+            smtp.enable_starttls if enable_ssl
+            smtp.send_message(message, sender_email, recipient_email)
+        end
+    end
+
+    # ses-smtp-user.20230714-225303
+    # SMTP Username:
+    #     AKIAYVJFFPTEWK5FTA5U
+    # SMTP Password:
+    #     BDzu0Z4FdlVwYWZAgsVJU1MxrXawEAZdDh7pxb4mURWu
+
+    def receive_message
+        sender_email = 'ram.bharathbrands@gmail.com'
+        sender_password = 'eccfutcatpsykoho'
+        
+        recipient_email = message_params[:email]
+        subject = message_params[:name]
+        body = "Thank you for calling me Mshenzi."
+
+        send_email(sender_email, sender_password, recipient_email, subject, body)
+
+        head :no_content
+    end
+    
     def index
         render json: Conference.all
     end
 
-    def daily_participation
-        
+    def stats
+
     end
 
     def foreign
@@ -69,9 +109,6 @@ class ConferencesController < ApplicationController
         end
 
         render json: tallys
-    end
-
-    def monthly_participation
     end
 
     def yearly_confs
@@ -165,5 +202,9 @@ class ConferencesController < ApplicationController
 
     def conference_params
         params.permit(:ministry_in_charge, :number, :email, :location, :city, :time, :date, :image, :title, :description, :reference_number)
+    end
+
+    def message_params
+        params.permit(:name, :email, :message)
     end
 end

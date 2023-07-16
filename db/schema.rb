@@ -23,6 +23,9 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_16_081602) do
     t.string "title"
     t.string "description"
     t.string "city"
+    t.string "issues"
+    t.string "resolutions"
+    t.string "recommendations"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end

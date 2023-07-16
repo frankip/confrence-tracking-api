@@ -12,6 +12,9 @@ class CreateConferences < ActiveRecord::Migration[7.0]
       t.string :title
       t.string :description
       t.string :city
+      t.string :issues
+      t.string :resolutions
+      t.string :recommendations
 
       t.timestamps
     end

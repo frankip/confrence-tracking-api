@@ -31,6 +31,7 @@ puts "Seeding"
 start_date = Date.new(2019, 1, 1)
 end_date = Date.new(Date.today.year, 12, 31)
 
+puts "Creating Conferences"
 97.times do
     start = (start_date..end_date).to_a.sample.strftime('%Y-%m-%d')
     last = (Date.parse(start) + rand(1..10)).strftime('%Y-%m-%d')
@@ -45,7 +46,10 @@ end_date = Date.new(Date.today.year, 12, 31)
       "city": cities.sample,
       "image": images.sample,
       "title": Faker::Lorem.sentence.slice(0..-2),
-      "description": Faker::Lorem.paragraph(sentence_count: 10)
+      "description": Faker::Lorem.paragraph(sentence_count: 10),
+      "issues": Faker::Lorem.paragraph(sentence_count: 15),
+      "resolutions": Faker::Lorem.paragraph(sentence_count: 15),
+      "recommendations": Faker::Lorem.paragraph(sentence_count: 15)
     }
 
     Conference.create(hash)
@@ -55,6 +59,7 @@ end
 
 nationalities = ["Turkish Cypriots", "Kenyans", "Kenyans", "Chadians", "Kenyans", "Kenyans", "Norwegians", "Kenyans", "Norwegians", "Kenyans", "Croatians", "Zambians", "Kenyans", "Saudis", "Kenyans", "Finnish Swedish", "Kenyans", "Malagasy", "Kenyans", "Finnish Swedish"]
 
+puts "Creating Participants"
 500.times do
   Participant.create!(
     name: Faker::Name.name,
@@ -67,6 +72,7 @@ nationalities = ["Turkish Cypriots", "Kenyans", "Kenyans", "Chadians", "Kenyans"
   )
 end
 
+puts "Creating Superuser"
 User.create({
   name: "Erick Ochieng Obuya",
   email: "erickochieng766@gmail.com",
@@ -78,6 +84,8 @@ User.create({
 cn = Conference.count
 pn = Participant.count
 
+
+puts "Creating Participations"
 1000.times do
   Participation.create!(
     participant_id: rand(1..pn),
