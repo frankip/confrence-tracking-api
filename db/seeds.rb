@@ -46,10 +46,10 @@ puts "Creating Conferences"
       "city": cities.sample,
       "image": images.sample,
       "title": Faker::Lorem.sentence.slice(0..-2),
-      "description": Faker::Lorem.paragraph(sentence_count: 10),
-      "issues": Faker::Lorem.paragraph(sentence_count: 15),
-      "resolutions": Faker::Lorem.paragraph(sentence_count: 15),
-      "recommendations": Faker::Lorem.paragraph(sentence_count: 15)
+      "description": Faker::Lorem.paragraph sentence_count: rand(1..4)
+      "issues": (1..rand(1..7)).to_a.map { Faker::Lorem.paragraph sentence_count: rand(1..4) }.join("|"),
+      "resolutions": (1..rand(1..7)).to_a.map { Faker::Lorem.paragraph sentence_count: rand(1..4) }.join("|"),
+      "recommendations": (1..rand(1..7)).to_a.map { Faker::Lorem.paragraph sentence_count: rand(1..4) }.join("|")
     }
 
     Conference.create(hash)

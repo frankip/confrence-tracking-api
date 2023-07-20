@@ -3,41 +3,14 @@ require 'fileutils'
 require 'net/smtp'
 
 class ConferencesController < ApplicationController
-    skip_before_action :authenticate, only: [:index, :show, :receive_message, :findByReferenceNumber, :monthly_tally, :yearly_tally, :foreign_vs_kenyan, :yearly_foreign_vs_kenyan, :monthly_foreign_vs_kenyan, :delete_conference, :update_conference]
-
-    # ses-smtp-user.20230714-225303
-    # SMTP Username:
-    #     AKIAYVJFFPTEWK5FTA5U
-    # SMTP Password:
-    #     BDzu0Z4FdlVwYWZAgsVJU1MxrXawEAZdDh7pxb4mURWu
-
-    def receive_message
-        sender_email = 'ram.bharathbrands@gmail.com'
-        sender_password = 'eccfutcatpsykoho'
-        
-        recipient_email = message_params[:email]
-        subject = message_params[:name]
-        body = "Thank you for calling me Mshenzi."
-
-        send_email(sender_email, sender_password, recipient_email, subject, body)
-
-        head :no_content
-    end
+    skip_before_action :authenticate, only: [:index, :show, :findByReferenceNumber, :monthly_tally, :yearly_tally, :foreign_vs_kenyan, :yearly_foreign_vs_kenyan, :monthly_foreign_vs_kenyan, :delete_conference, :update_conference]
     
     def index
         render json: Conference.all
     end
 
     def stats
-        annual_events = Conference.all # everything
-        monthly_events = Conference.all #hjer fdkcl
-
-        render json: {
-            annual_events: annual_events,
-            monthly_events: monthly_events,
-            weekly_events: weekkly_events,
-            daily_events: daily_events
-        }
+        
     end
 
     def foreign
@@ -168,11 +141,40 @@ class ConferencesController < ApplicationController
 
     def update_conference
         conference = Conference.find_by(reference_number: params[:reference_number])
+        ref_number = params[:reference_number]
+
+        conference_update_stage_params = conference_update_params
+
+        conference_update_stage_params.delete(:image)
+        conference_update_stage_params.delete(:participants)
+        
         if conference
-          conference.update(conference_params)
+            if conference_update_params[:participants]
+                new_participants = Participant.create!(conference_update_params[:participants])
+                new_participants.each do |participant|
+                    Participation.create!({
+                        participant_id: participant.id,
+                        conference_id: conference.id
+                    })
+                end
+                conference_update_params.delete(:participants)
+            end
+            if conference_update_params[:image]
+                data = conference_update_params[:image].split(",")
+                content_type = data[0].match(/data:(.*?);/)[1]
+                image = File.join('conferences', ref_number)
+                path = File.join("/"+image.to_s, "poster."+content_type.split("/")[-1])
+                if File.exist?("/home/dev-erick/test.md")
+                    FileUtils.rm_f()
+                end
+                FileUtils.rm_f(Rails.root.join("public", *conference.image.slice(1..-1).split("/")))
+                save_image(path, data[-1])
+                conference_update_stage_params[:image] = path
+            end
+          conference.update!(conference_update_stage_params)
           render json: conference
         else
-          render json: {error: 'Unable to update conference'}
+            render json: { error: 'Record not found' }, status: :not_found
         end
     end
 
@@ -190,6 +192,10 @@ class ConferencesController < ApplicationController
 
     def conference_params
         params.permit(:ministry_in_charge, :number, :email, :location, :city, :time, :date, :image, :title, :description, :reference_number)
+    end
+
+    def conference_update_params
+        params.permit(:ministry_in_charge, :number, :actual, :email, :location, :city, :time, :date, :image, :title, :description, :reference_number, :issues, :resolutions, :recommendations, participants: [ :email, :phone, :id_number, :address, :city, :nationality ])
     end
 
     def message_params

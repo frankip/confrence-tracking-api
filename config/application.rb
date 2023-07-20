@@ -37,7 +37,7 @@ module ConfrenceTrackingApi
     
     config.api_only = true
     config.middleware.insert_before(Rack::Runtime, Rack::Static, urls: ['/public'], root: 'public')
-
+    
     config.middleware.use ActionDispatch::Cookies
   end
 end
