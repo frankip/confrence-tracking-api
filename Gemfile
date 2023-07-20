@@ -34,3 +34,5 @@ gem "jwt", "~> 2.7"
 gem "bcrypt", "~> 3.1"
 
 gem "faker", "~> 3.2"
+
+gem "image_processing", "~> 1.12"

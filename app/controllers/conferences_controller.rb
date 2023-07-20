@@ -3,10 +3,31 @@ require 'fileutils'
 require 'net/smtp'
 
 class ConferencesController < ApplicationController
-    skip_before_action :authenticate, only: [:index, :show, :findByReferenceNumber, :monthly_tally, :yearly_tally, :foreign_vs_kenyan, :yearly_foreign_vs_kenyan, :monthly_foreign_vs_kenyan, :delete_conference, :update_conference]
+    skip_before_action :authenticate, only: [:index, :show, :serve_poster, :serve_file_attachment, :findByReferenceNumber, :monthly_tally, :yearly_tally, :foreign_vs_kenyan, :yearly_foreign_vs_kenyan, :monthly_foreign_vs_kenyan, :delete_conference, :update_conference]
     
     def index
         render json: Conference.all
+    end
+
+    def serve_poster
+        conference = find_conference
+        if conference.poster.attached?
+            redirect_to rails_blob_url(conference.poster)
+        else
+            render json: { message: "File Not Found" }, status: :not_found
+        end
+    end
+
+    def serve_file_attachment
+        conference = find_conference
+        if conference.files.attached?
+            attachment = conference.files.find_by(id: params[:attachment_id])
+            if attachment.present?
+                redirect_to rails_blob_url(attachment)
+                return
+            end
+        end
+        render json: { message: "File Not Found" }, status: :not_found
     end
 
     def stats
@@ -85,58 +106,26 @@ class ConferencesController < ApplicationController
     end
 
     def findByReferenceNumber
-        render json: Conference.find_by(reference_number: params[:reference_number])
+        conference = Conference.find_by(reference_number: params[:reference_number])
+        attachment_ids = conference.files.attachments.pluck(:id)
+        render json: conference, serializer: ConferenceSerializer, attachment_ids: attachment_ids
     end
 
     def create
         ref_number = SecureRandom.alphanumeric(10).upcase
 
-        data = conference_params[:image].split(",")
-        content_type = data[0].match(/data:(.*?);/)[1]
-
-        image = File.join('conferences', ref_number)
-
         conference = Conference.create!({
-            reference_number: ref_number,
-            ministry_in_charge: conference_params[:ministry_in_charge],
-            number: conference_params[:number],
-            email: conference_params[:email],
-            location: conference_params[:location],
-            city: conference_params[:city],
-            time: conference_params[:time],
-            date: conference_params[:date],
-            image: File.join("/"+image.to_s, "poster."+content_type.split("/")[-1]),
-            title: conference_params[:title],
-            description: conference_params[:description]
+            **conference_params,
+            reference_number: ref_number
         })
-
-        if conference
-            save_image(conference.image, data[-1])
-        end
 
         render json: conference, status: :created
     end
 
     def show
-      conference = Conference.find(params[:id])
-      render json: conference, status: :ok
-    end
-
-    def save_image(path, base64_string)
-
-        # Decode the base64 string
-        image_data = Base64.decode64(base64_string)
-
-        filepath = Rails.root.join("public").to_s + path.to_s
-
-        directory_path = filepath.split("/").slice(0...-1).join("/")
-
-        FileUtils.mkdir_p(directory_path) unless File.directory?(directory_path)
-
-        # Write the decoded data to a file
-        File.open(filepath, 'wb') do |f|
-            f.write image_data
-        end
+        conference = Conference.find(params[:id])
+        attachment_ids = conference.files.attachments.pluck(:id)
+        render json: conference, serializer: ConferenceSerializer, attachment_ids: attachment_ids
     end
 
     def update_conference
@@ -145,8 +134,10 @@ class ConferencesController < ApplicationController
 
         conference_update_stage_params = conference_update_params
 
-        conference_update_stage_params.delete(:image)
+        # Remove attachments from the conference update hash
+        conference_update_stage_params.delete(:poster)
         conference_update_stage_params.delete(:participants)
+        conference_update_stage_params.delete(:files)
         
         if conference
             if conference_update_params[:participants]
@@ -157,24 +148,39 @@ class ConferencesController < ApplicationController
                         conference_id: conference.id
                     })
                 end
-                conference_update_params.delete(:participants)
             end
-            if conference_update_params[:image]
-                data = conference_update_params[:image].split(",")
-                content_type = data[0].match(/data:(.*?);/)[1]
-                image = File.join('conferences', ref_number)
-                path = File.join("/"+image.to_s, "poster."+content_type.split("/")[-1])
-                if File.exist?("/home/dev-erick/test.md")
-                    FileUtils.rm_f()
+            if conference_update_params[:poster]
+                # Remove the previous one
+                conference.poster.purge_later
+                save_binary_data_to_active_storage(conference, conference_update_params[:poster], "poster")
+            end
+            if conference_update_params[:files]
+                # Attach each file
+                conference_update_params[:files].each do |fileDataUrl|
+                    save_binary_data_to_active_storage(conference, fileDataUrl, "files")
                 end
-                FileUtils.rm_f(Rails.root.join("public", *conference.image.slice(1..-1).split("/")))
-                save_image(path, data[-1])
-                conference_update_stage_params[:image] = path
             end
           conference.update!(conference_update_stage_params)
           render json: conference
         else
             render json: { error: 'Record not found' }, status: :not_found
+        end
+    end
+
+    def save_binary_data_to_active_storage(conf, data_url, prop)
+        # Separate base64 string from metadata
+        data = data_url.split(',')
+        base64String = data[-1]
+        content_type = data[0].slice((data[0].index(":")+1)...data[0].index(";")) # Content-Type
+        extension = data[0].slice((data[0].index("/")+1)...data[0].index(";")) # File extension
+
+        # Extracting the base64 String
+        binary_data = Base64.decode64(base64String)
+
+        if prop == "poster"
+            conf.poster.attach(io: StringIO.new(binary_data), filename: "#{conf.reference_number}.#{extension}", content_type: content_type)
+        else
+            conf.files.attach(io: StringIO.new(binary_data), filename: "#{conf.reference_number}.#{extension}", content_type: content_type)
         end
     end
 
@@ -190,12 +196,16 @@ class ConferencesController < ApplicationController
 
     private
 
+    def find_conference
+        Conference.find(params[:id])
+    end
+
     def conference_params
-        params.permit(:ministry_in_charge, :number, :email, :location, :city, :time, :date, :image, :title, :description, :reference_number)
+        params.permit(:ministry_in_charge, :number, :email, :location, :city, :time, :date, :poster, :title, :description, files: [])
     end
 
     def conference_update_params
-        params.permit(:ministry_in_charge, :number, :actual, :email, :location, :city, :time, :date, :image, :title, :description, :reference_number, :issues, :resolutions, :recommendations, participants: [ :email, :phone, :id_number, :address, :city, :nationality ])
+        params.permit(:ministry_in_charge, :number, :actual, :email, :location, :city, :time, :date, :poster, :title, :description, :reference_number, :issues, :resolutions, :recommendations, files: [], participants: [ :email, :phone, :id_number, :address, :city, :nationality ])
     end
 
     def message_params

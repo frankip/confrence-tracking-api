@@ -8,7 +8,6 @@ class CreateConferences < ActiveRecord::Migration[7.0]
       t.string :location
       t.string :time
       t.string :date
-      t.string :image
       t.string :title
       t.string :description
       t.string :city
