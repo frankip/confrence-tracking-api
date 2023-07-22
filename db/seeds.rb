@@ -8,6 +8,7 @@
 
 require 'date'
 require 'faker'
+require 'thread'
 
 ministries = [
   {
@@ -431,6 +432,11 @@ images = [
 
 cities = ["Nairobi", "Mombasa", "Kisumu", "Nakuru", "Eldoret", "Naivasha"]
 
+def attach_file_to_conference(model_instance, remote_url, file_name)
+  io = URI.open(remote_url)
+  puts "Succesfully attached [ ------- #{model_instance.id} - #{model_instance.reference_number} -------> ] #{model_instance.poster.attach(io: io, filename: "#{file_name}")}"
+end
+
 puts "Seeding"
 
 start_date = Date.new(2019, 1, 1)
@@ -450,8 +456,10 @@ end
 
 state_department_count = StateDepartment.count
 
+threads = []
+
 puts "Creating Conferences"
-97.times do
+56.times do
     start = (start_date..end_date).to_a.sample.strftime('%Y-%m-%d')
     last = (Date.parse(start) + rand(1..10)).strftime('%Y-%m-%d')
     ref_num = SecureRandom.alphanumeric(10).upcase
@@ -473,7 +481,9 @@ puts "Creating Conferences"
 
     conf = Conference.create(hash)
     puts "Attaching remote poster to [#{ref_num} #{conf.id}] using an active job..."
-    AttachRemoteImageJob.perform_later(conf, images.sample, "#{ref_num}.jpg")
+    threads << Thread.new do
+      attach_file_to_conference(conf, images.sample, "#{ref_num}.jpg")
+    end
 end
 
 # confs.map { |c| {"#{c.id}" => c.participants.map { |p| [p.id, p.nationality] } } }
@@ -513,5 +523,11 @@ puts "Creating Participations"
     conference_id: rand(1..cn)
   )
 end
+
+puts "Waiting for all file attachment threads to complete"
+
+threads.each(&:join)
+
+puts "All active jobs complete!"
 
 puts "Done seeding"
