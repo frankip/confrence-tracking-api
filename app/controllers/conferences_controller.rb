@@ -114,12 +114,33 @@ class ConferencesController < ApplicationController
     def create
         ref_number = SecureRandom.alphanumeric(10).upcase
 
+        conference_create_params = conference_params
+
+        conference_create_params.delete(:poster)
+        conference_create_params.delete(:files)
+
         conference = Conference.create!({
-            **conference_params,
+            **conference_create_params,
             reference_number: ref_number
         })
 
+        save_conference_attachments(conference, conference_params)
+
         render json: conference, status: :created
+    end
+
+    def save_conference_attachments(conference_instance, conference_params_hash)
+        if conference_params_hash[:poster]
+            # Remove the previous one
+            conference_instance.poster.purge_later
+            save_binary_data_to_active_storage(conference_instance, conference_params_hash[:poster], "poster")
+        end
+        if conference_params_hash[:files]
+            # Attach each file
+            conference_params_hash[:files].each do |fileDataUrl|
+                save_binary_data_to_active_storage(conference_instance, fileDataUrl, "files")
+            end
+        end
     end
 
     def show
@@ -149,17 +170,8 @@ class ConferencesController < ApplicationController
                     })
                 end
             end
-            if conference_update_params[:poster]
-                # Remove the previous one
-                conference.poster.purge_later
-                save_binary_data_to_active_storage(conference, conference_update_params[:poster], "poster")
-            end
-            if conference_update_params[:files]
-                # Attach each file
-                conference_update_params[:files].each do |fileDataUrl|
-                    save_binary_data_to_active_storage(conference, fileDataUrl, "files")
-                end
-            end
+
+            save_conference_attachments(conference, conference_update_params)
           conference.update!(conference_update_stage_params)
           render json: conference
         else
@@ -201,11 +213,11 @@ class ConferencesController < ApplicationController
     end
 
     def conference_params
-        params.permit(:ministry_in_charge, :number, :email, :location, :city, :time, :date, :poster, :title, :description, files: [])
+        params.permit(:state_department_id, :number, :email, :location, :city, :time, :date, :poster, :title, :description, :expected, files: [])
     end
 
     def conference_update_params
-        params.permit(:ministry_in_charge, :number, :actual, :email, :location, :city, :time, :date, :poster, :title, :description, :reference_number, :issues, :resolutions, :recommendations, files: [], participants: [ :email, :phone, :id_number, :address, :city, :nationality ])
+        params.permit(:state_department_id, :number, :actual, :expected, :email, :location, :city, :time, :date, :poster, :title, :description, :reference_number, :issues, :resolutions, :recommendations, files: [], participants: [ :email, :phone, :id_number, :address, :city, :nationality ])
     end
 
     def message_params

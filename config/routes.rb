@@ -1,4 +1,6 @@
 Rails.application.routes.draw do
+  resources :state_departments
+  resources :ministries
 
   resources :participations
   resources :participant_ids
